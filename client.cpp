@@ -139,7 +139,7 @@ int CaptureImage(HWND hwnd, CHAR *dirPath, CHAR *filename)
     bi.biWidth = bmpScreen.bmWidth;
     bi.biHeight = bmpScreen.bmHeight;
     bi.biPlanes = 1;
-    bi.biBitCount = 32;
+    bi.biBitCount = 16;
     bi.biCompression = BI_RGB;
     bi.biSizeImage = 0;
     bi.biXPelsPerMeter = 0;
