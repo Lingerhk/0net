@@ -21,7 +21,7 @@ int sendFile(SOCKET client, char *filename)
     char sendbuf[1024];
     DWORD        dwRead;  
     BOOL         bRet;
-	Sleep(100);
+	Sleep(500);
 
     HANDLE hFile=CreateFile(filename,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
 	if(hFile==INVALID_HANDLE_VALUE) {
@@ -31,7 +31,7 @@ int sendFile(SOCKET client, char *filename)
         bRet=ReadFile(hFile,sendbuf,1024,&dwRead,NULL);
         if(bRet==FALSE) break;
         else if(dwRead==0) {
-			Sleep(100);
+			Sleep(200);
             break;  
         } else {  
             send(client,sendbuf,dwRead,0);
@@ -295,8 +295,8 @@ void c_socket()
 	clientService.sin_port = htons(ServerPort);
 	while(1){
 		if ( connect( client, (SOCKADDR*) &clientService, sizeof(clientService) ) == SOCKET_ERROR) {
-			printf( "\nFailed to connect.\nWait 10s...\n" );
-			Sleep(2000);
+			//printf( "\nFailed to connect.\nWait 10s...\n" );
+			Sleep(20000);
 			continue;
 		}else {
 			send(client,comInfo, 40, 0);
@@ -318,8 +318,8 @@ void c_socket()
 			while(1){
 				client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 				if ( connect( client, (SOCKADDR*) &clientService, sizeof(clientService) ) == SOCKET_ERROR) {
-					printf( "\nFailed to connect.\nWait 10s...\n" );
-					Sleep(2000);
+					//printf( "\nFailed to connect.\nWait 10s...\n" );
+					Sleep(20000);
 					continue;
 				}else {
 					send(client,comInfo, 40, 0);
