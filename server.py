@@ -124,7 +124,7 @@ def help():
     print "\t@some message   --send a message to the target's desktop."
     print "Author: s0nnet"
     print "Email: s0nnet@qq.com"
-    print "Update: 2015/6/24"
+    print "Update: 2015/6/28"
     print "======================================================================"
     
 

